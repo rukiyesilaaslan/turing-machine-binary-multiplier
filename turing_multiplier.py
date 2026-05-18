@@ -96,38 +96,22 @@ class TuringMachine:
         print("Durum :", self.state)
 
     # Adım bilgisi yazdır
-    def print_step(self, read_char, write_char, move):
+    def print_step(self, message):
 
         self.step += 1
 
-        print("\n===================================")
-        print(f"ADIM {self.step}")
-        print("===================================")
-
-        print("Mevcut Durum :", self.state)
-        print("Okunan Sembol:", read_char)
-        print("Yazılan Sembol:", write_char)
-        print("Kafa Hareketi:", move)
-
-        self.print_tape()
+        print(f"\nAdim {self.step}: {message}")
 
     # '*' karakterini bul
     def find_delimiter(self):
 
         self.state = "q1"
 
-        print("\n--- '*' karakteri aranıyor ---")
-
         while self.read_symbol() != "*":
-
-            current_symbol = self.read_symbol()
-
-            self.print_step(current_symbol, current_symbol, "R")
-
             self.move_right()
 
-        print("\n'*' karakteri bulundu!")
-        print("Head Pozisyonu:", self.head)
+        self.print_step("'*' bulundu → operandlar ayrıldı")
+
 
     # Operandları ayır
     def separate_operands(self):
@@ -146,12 +130,13 @@ class TuringMachine:
         print("OPERAND AYRIŞTIRMA")
         print("===================================")
 
-        print("Birinci Sayı :", first_number)
-        print("İkinci Sayı  :", second_number)
+        print(f"Birinci Operand : {first_number}")
+        print(f"İkinci Operand  : {second_number}")
 
         return first_number, second_number
 
     # Shift & Add binary çarpma
+        # Shift & Add binary çarpma
     def binary_multiply(self):
 
         self.state = "q3"
@@ -160,53 +145,42 @@ class TuringMachine:
         multiplier = self.num2
 
         result = 0
-
         shift = 0
 
-        print("\n===================================")
-        print("SHIFT & ADD BAŞLADI")
-        print("===================================")
+        print("\nAdım Adım Çalışma:")
 
         for bit in reversed(multiplier):
 
-            self.step += 1
-
-            print("\n===================================")
-            print(f"ADIM {self.step}")
-            print("===================================")
-
-            print("İşlenen Bit:", bit)
-
             if bit == '1':
-
-                self.state = "q4"
 
                 shifted_value = int(multiplicand, 2) << shift
 
                 shifted_binary = bin(shifted_value)[2:]
 
-                print(f"{multiplicand} sola {shift} kaydırıldı")
-
-                print("Kaydırılmış Değer :", shifted_binary)
-
                 result += shifted_value
 
-                print("Ara Sonuç :", bin(result)[2:])
+                self.print_step(
+                    f"bit = 1 → {multiplicand} sola {shift} kaydırıldı → {shifted_binary}"
+                )
 
             else:
 
-                print("Bit 0 olduğu için toplama yapılmadı")
+                self.print_step(
+                    "bit = 0 → işlem yapılmadı"
+                )
 
             shift += 1
 
-        return bin(result)[2:]
+        final_result = bin(result)[2:]
+
+        self.print_step(f"sonuç yazıldı → {final_result}")
+
+        return final_result
 
     # Makineyi çalıştır
     def run(self):
 
-        print("\n===================================")
-        print("TURING MAKİNESİ BAŞLATILDI")
-        print("===================================")
+        print("\nBaşlangıç:", f"{self.num1}*{self.num2}=")
 
         self.print_tape()
 
@@ -238,8 +212,8 @@ class TuringMachine:
 # Program başlangıcı
 if __name__ == "__main__":
 
-    num1 = input("Birinci binary sayıyı girin: ")
-    num2 = input("İkinci binary sayıyı girin: ")
+    num1 = input("Birinci binary sayiyi girin: ")
+    num2 = input("İkinci binary sayiyi girin: ")
 
     tm = TuringMachine(num1, num2)
 
