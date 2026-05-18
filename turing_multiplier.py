@@ -95,22 +95,51 @@ class TuringMachine:
 
         print("Durum :", self.state)
 
-    # Adım bilgisi yazdır
-    def print_step(self, message):
+        # Adım bilgisi yazdır
+    def print_step(self, state, read_symbol,
+                   write_symbol, move, message):
 
         self.step += 1
 
-        print(f"\nAdim {self.step}: {message}")
+        tape_str = "".join(self.tape).rstrip('B')
 
+        print(
+            f"Adım {self.step} | "
+            f"Durum: {state} | "
+            f"Okunan: {read_symbol} | "
+            f"Yazılan: {write_symbol} | "
+            f"Hareket: {move} | "
+            f"Bant: {tape_str}"
+        )
+
+        print(f"Açıklama: {message}")
+    
     # '*' karakterini bul
     def find_delimiter(self):
 
         self.state = "q1"
 
         while self.read_symbol() != "*":
+
+            current_symbol = self.read_symbol()
+
+            self.print_step(
+                self.state,
+                current_symbol,
+                current_symbol,
+                "R",
+                "Sağa ilerleniyor"
+            )
+
             self.move_right()
 
-        self.print_step("'*' bulundu → operandlar ayrıldı")
+        self.print_step(
+            self.state,
+            "*",
+            "*",
+            "R",
+            "'*' bulundu → operandlar ayrıldı"
+        )
 
 
     # Operandları ayır
@@ -135,7 +164,6 @@ class TuringMachine:
 
         return first_number, second_number
 
-    # Shift & Add binary çarpma
         # Shift & Add binary çarpma
     def binary_multiply(self):
 
@@ -153,6 +181,8 @@ class TuringMachine:
 
             if bit == '1':
 
+                self.state = "q4"
+
                 shifted_value = int(multiplicand, 2) << shift
 
                 shifted_binary = bin(shifted_value)[2:]
@@ -160,20 +190,34 @@ class TuringMachine:
                 result += shifted_value
 
                 self.print_step(
-                    f"bit = 1 → {multiplicand} sola {shift} kaydırıldı → {shifted_binary}"
+                    self.state,
+                    bit,
+                    bit,
+                    "L",
+                    f"{multiplicand} sola {shift} kaydırıldı → {shifted_binary}"
                 )
 
             else:
 
                 self.print_step(
-                    "bit = 0 → işlem yapılmadı"
+                    self.state,
+                    bit,
+                    bit,
+                    "R",
+                    "Bit 0 olduğu için işlem yapılmadı"
                 )
 
             shift += 1
 
         final_result = bin(result)[2:]
 
-        self.print_step(f"sonuç yazıldı → {final_result}")
+        self.print_step(
+            self.accept_state,
+            "=",
+            final_result,
+            "S",
+            f"Sonuç yazıldı → {final_result}"
+        )
 
         return final_result
 
