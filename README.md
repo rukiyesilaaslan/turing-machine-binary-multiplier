@@ -117,7 +117,7 @@ turing_project/
 
 ## Geçiş Tablosu
 
-![Geçiş Tablosu](images/gecis_tablosu.png)
+![Geçiş Tablosu](images/hareket_gecis_tablosu.png)
 
 ---
 
