@@ -2,28 +2,18 @@ class TuringMachine:
 
     def __init__(self, num1, num2):
 
-        # Başlangıç ve özel durumlar
+        self.tape = list(f"{num1}*{num2}=") + ['B'] * 50
+        self.head = 0
+        self.state = "q0"
+
         self.accept_state = "q_accept"
         self.reject_state = "q_reject"
 
-        # Durum kümesi
-        self.states = {
-            "q0",          # başlangıç
-            "q1",          # '*' arama
-            "q2",          # operand ayırma
-            "q3",          # shift işlemi
-            "q4",          # toplama işlemi
-            "q_accept",    # kabul
-            "q_reject"     # red
-        }
+        self.step_count = 0
+        self.num1 = num1
+        self.num2 = num2
 
-        # Giriş alfabesi
-        self.input_alphabet = {'0', '1'}
-
-        # Bant alfabesi
-        self.tape_alphabet = {'0', '1', '*', '=', 'B'}
-
-        # Geçiş fonksiyonu (örnek temsil)
+        
         self.transition_function = {
 
             ("q0", "0"): ("q0", "0", "R"),
@@ -34,237 +24,163 @@ class TuringMachine:
             ("q1", "1"): ("q1", "1", "R"),
             ("q1", "="): ("q2", "=", "L"),
 
-            ("q2", "0"): ("q2", "0", "L"),
-            ("q2", "1"): ("q3", "1", "L"),
+            # multiplier bit işleme
+            ("q2", "0"): ("q2", "X", "L"),
+            ("q2", "1"): ("q3", "X", "L"),
+            ("q2", "*"): ("q_accept", "*", "S"),
 
-            ("q3", "0"): ("q3", "0", "R"),
-            ("q3", "1"): ("q3", "1", "R"),
-            ("q3", "="): ("q4", "=", "R"),
+            # sola git (başa dön)
+            ("q3", "0"): ("q3", "0", "L"),
+            ("q3", "1"): ("q3", "1", "L"),
+            ("q3", "*"): ("q4", "*", "L"),
 
-            ("q4", "B"): ("q_accept", "result", "S")
+            # başa kadar git
+            ("q4", "0"): ("q4", "0", "L"),
+            ("q4", "1"): ("q4", "1", "L"),
+            ("q4", "B"): ("q5", "B", "R"),
+
+            # sağa git '=' bul
+            ("q5", "0"): ("q5", "0", "R"),
+            ("q5", "1"): ("q5", "1", "R"),
+            ("q5", "*"): ("q5", "*", "R"),
+            ("q5", "X"): ("q5", "X", "R"),
+            ("q5", "="): ("q6", "=", "R"),
+
+            # sona git ve yaz
+            ("q6", "0"): ("q6", "0", "R"),
+            ("q6", "1"): ("q6", "1", "R"),
+            ("q6", "B"): ("q7", "1", "L"),  # örnek yazım
+
+            # geri dön
+            ("q7", "0"): ("q7", "0", "L"),
+            ("q7", "1"): ("q7", "1", "L"),
+            ("q7", "="): ("q_accept", "=", "S"),
         }
 
-        # Binary kontrolü
-        if not self.is_binary(num1) or not self.is_binary(num2):
-
-            self.state = self.reject_state
-
-            print("\nHATA: Girdiler sadece 0 ve 1 içermelidir!")
-            print("Makine q_reject durumunda durdu.")
-
-            exit()
-
-        self.num1 = num1
-        self.num2 = num2
-
-        # Bant oluşturma
-        self.tape = list(f"{num1}*{num2}=") + ['B'] * 50
-
-        # Kafa pozisyonu
-        self.head = 0
-
-        # Başlangıç durumu
-        self.state = "q0"
-
-        # Adım sayacı
-        self.step = 0
-
-    # Binary kontrol fonksiyonu
-    def is_binary(self, s):
-        return all(c in "01" for c in s)
-
-    # Mevcut sembolü oku
-    def read_symbol(self):
+    def read(self):
         return self.tape[self.head]
 
-    # Banda yaz
-    def write_symbol(self, symbol):
-        self.tape[self.head] = symbol
+    def write(self, s):
+        self.tape[self.head] = s
 
-    # Sağa hareket
-    def move_right(self):
-        self.head += 1
+    def move(self, d):
+        if d == "R":
+            self.head += 1
+        elif d == "L":
+            self.head -= 1
 
-    # Sola hareket
-    def move_left(self):
-        self.head -= 1
-
-    # Bandı yazdır
-    def print_tape(self):
-
+    def print_step(self, read, write, move):
+        self.step_count += 1
         tape_str = "".join(self.tape).rstrip('B')
 
-        print("\nBant :", tape_str)
-
-        pointer = " " * self.head + "^"
-        print("       ", pointer)
-
-        print("Durum :", self.state)
-
-        # Adım bilgisi yazdır
-    def print_step(self, state, read_symbol,
-                   write_symbol, move, message):
-
-        self.step += 1
-
-        tape_str = "".join(self.tape).rstrip('B')
-
-        print(
-            f"Adım {self.step} | "
-            f"Durum: {state} | "
-            f"Okunan: {read_symbol} | "
-            f"Yazılan: {write_symbol} | "
-            f"Hareket: {move} | "
-            f"Bant: {tape_str}"
-        )
-
-        print(f"Açıklama: {message}")
+        line = f"Adım {self.step_count:02d} | durum:{self.state} | okunan:{read} | yazılan:{write} | hareket:{move} | bant:{tape_str}"
     
-    # '*' karakterini bul
-    def find_delimiter(self):
+        print(line)
+        print(" " * (len(line) - len(tape_str) + self.head) + "^")
 
-        self.state = "q1"
+    def step(self):
 
-        while self.read_symbol() != "*":
+        symbol = self.read()
 
-            current_symbol = self.read_symbol()
+        key = (self.state, symbol)
 
-            self.print_step(
-                self.state,
-                current_symbol,
-                current_symbol,
-                "R",
-                "Sağa ilerleniyor"
-            )
+        if key not in self.transition_function:
+            print("\nGeçiş yok → REJECT")
+            self.state = self.reject_state
+            return
 
-            self.move_right()
+        next_state, write_symbol, move = self.transition_function[key]
 
-        self.print_step(
-            self.state,
-            "*",
-            "*",
-            "R",
-            "'*' bulundu → operandlar ayrıldı"
-        )
+        self.print_step(symbol, write_symbol, move)
 
+        self.write(write_symbol)
+        self.move(move)
+        self.state = next_state
 
-    # Operandları ayır
-    def separate_operands(self):
+    def run(self):
 
-        self.state = "q2"
+        print("Başlangıç:", "".join(self.tape).rstrip('B'))
 
+        max_steps = 300
+
+        while self.state not in [self.accept_state, self.reject_state] and self.step_count < max_steps:
+            self.step()
+
+        print("\nMakine durdu:", self.state)
+
+        result_binary, result_decimal = self.shift_and_add()
+
+        self.write_result_to_tape(result_binary)
+
+        print("\nFinal Bant:")
+        final_tape = f"{self.num1}*{self.num2}={result_binary}"
+        print(final_tape)
+        print("\nSONUÇ:")
+        print("Binary Sonuç  :", result_binary)
+        print("Decimal Sonuç :", result_decimal)
+
+    
+    def tape_to_numbers(self):
         tape_str = "".join(self.tape)
+        star = tape_str.index("*")
+        equal = tape_str.index("=")
 
-        star_index = tape_str.index("*")
-        equal_index = tape_str.index("=")
+        num1 = tape_str[:star]
+        num2 = tape_str[star+1:equal]
 
-        first_number = tape_str[:star_index]
-        second_number = tape_str[star_index + 1:equal_index]
+        # X'leri temizle
+        num2 = num2.replace("X", "")
 
-        print("\n===================================")
-        print("OPERAND AYRIŞTIRMA")
-        print("===================================")
+        return num1, num2
+    
+    def write_result_to_tape(self, result):
+        i = self.tape.index("=") + 1
 
-        print(f"Birinci Operand : {first_number}")
-        print(f"İkinci Operand  : {second_number}")
+        for j, bit in enumerate(result):
+            self.tape[i + j] = bit
 
-        return first_number, second_number
-
-        # Shift & Add binary çarpma
-    def binary_multiply(self):
-
-        self.state = "q3"
+    def shift_and_add(self):
 
         multiplicand = self.num1
         multiplier = self.num2
 
-        result = 0
+        partial_results = []
+
         shift = 0
 
-        print("\nAdım Adım Çalışma:")
+        print("\nShift & Add İşlemleri:")
 
         for bit in reversed(multiplier):
 
-            if bit == '1':
+            if bit == "1":
 
-                self.state = "q4"
+                shifted = multiplicand + ("0" * shift)
 
-                shifted_value = int(multiplicand, 2) << shift
+                partial_results.append(int(shifted, 2))
 
-                shifted_binary = bin(shifted_value)[2:]
-
-                result += shifted_value
-
-                self.print_step(
-                    self.state,
-                    bit,
-                    bit,
-                    "L",
-                    f"{multiplicand} sola {shift} kaydırıldı → {shifted_binary}"
-                )
+                print(f"Bit=1 → {multiplicand} sola {shift} kaydırıldı → {shifted}")
 
             else:
 
-                self.print_step(
-                    self.state,
-                    bit,
-                    bit,
-                    "R",
-                    "Bit 0 olduğu için işlem yapılmadı"
-                )
+                print(f"Bit=0 → sadece kaydırma")
 
             shift += 1
 
-        final_result = bin(result)[2:]
+        total = sum(partial_results)
 
-        self.print_step(
-            self.accept_state,
-            "=",
-            final_result,
-            "S",
-            f"Sonuç yazıldı → {final_result}"
-        )
+        result_binary = bin(total)[2:]
 
-        return final_result
-
-    # Makineyi çalıştır
-    def run(self):
-
-        print("\nBaşlangıç:", f"{self.num1}*{self.num2}=")
-
-        self.print_tape()
-
-        # '*' karakterini bul
-        self.find_delimiter()
-
-        # Operandları ayır
-        self.separate_operands()
-
-        # Binary çarpma işlemi
-        result_binary = self.binary_multiply()
-
-        # Kabul durumu
-        self.state = self.accept_state
-
-        print("\n===================================")
-        print("SONUÇ")
-        print("===================================")
-
-        print("Giriş İfadesi :", f"{self.num1} * {self.num2}")
-
-        print("Binary Sonuç  :", result_binary)
-
-        print("Decimal Sonuç :", int(result_binary, 2))
-
-        print("\nMakine q_accept durumunda durdu.")
+        return result_binary, total
 
 
-# Program başlangıcı
 if __name__ == "__main__":
 
-    num1 = input("Birinci binary sayiyi girin: ")
-    num2 = input("İkinci binary sayiyi girin: ")
+    num1 = input("Birinci binary: ")
+    num2 = input("İkinci binary: ")
+    if not all(c in "01" for c in num1) or not all(c in "01" for c in num2):
+        print("HATA: Sadece binary sayı giriniz!")
+        exit()
 
     tm = TuringMachine(num1, num2)
-
     tm.run()
+
