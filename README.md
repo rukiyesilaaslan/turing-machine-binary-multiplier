@@ -195,3 +195,10 @@ python3 turing_multiplier.py
 - State Transition System
 
 ---
+
+## Proje anlatım youtube linki 
+
+```text
+https://youtu.be/MdLQ8I2Q45k
+```
+
